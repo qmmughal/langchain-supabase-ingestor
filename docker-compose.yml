@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------
+  # FastAPI REST API
+  # ---------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # Ingestor service (continuous polling loop)
+  # ---------------------------------------------------------------
+  ingestor:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m backend.ingestor.main --loop --interval 60
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # Alert engine (Supabase Realtime subscriber)
+  # ---------------------------------------------------------------
+  alert_engine:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m backend.alert_engine.engine
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # Ollama – local LLM server
+  # ---------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # GPU support (uncomment if you have NVIDIA GPU):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ---------------------------------------------------------------
+  # Next.js Dashboard
+  # ---------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

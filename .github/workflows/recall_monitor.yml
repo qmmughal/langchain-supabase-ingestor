@@ -1,0 +1,134 @@
+name: FDA Recall Monitor
+
+on:
+  # Run every 6 hours
+  schedule:
+    - cron: "0 */6 * * *"
+  # Allow manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (fetch but do not persist)"
+        required: false
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: write        # needed to push DB cache back (optional)
+  actions: read
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  monitor:
+    name: Poll FDA Recalls
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Python setup ──────────────────────────────────────────────────────
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      # ── 3. Install dependencies ──────────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── 4. Restore DB cache ──────────────────────────────────────────────────
+      - name: Restore recall database cache
+        id: cache-db
+        uses: actions/cache@v4
+        with:
+          path: data/recalls.db
+          key: recalls-db-v1-${{ github.ref_name }}
+          restore-keys: |
+            recalls-db-v1-
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      # ── 5. Run the agent ─────────────────────────────────────────────────────
+      - name: Run FDA Recall Monitor
+        env:
+          FDA_API_KEY: ${{ secrets.FDA_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python cli.py run --dry-run --verbose
+          else
+            python cli.py run --verbose
+          fi
+
+      # ── 6. Print stats ───────────────────────────────────────────────────────
+      - name: Print database statistics
+        run: python cli.py stats
+        continue-on-error: true
+
+      # ── 7. Upload HTML report as artifact ────────────────────────────────────
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recall-report-${{ github.run_number }}
+          path: data/report.html
+          retention-days: 30
+
+      # ── 8. Upload NDJSON log as artifact ─────────────────────────────────────
+      - name: Upload NDJSON log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recalls-ndjson-${{ github.run_number }}
+          path: data/recalls.ndjson
+          retention-days: 90
+
+      # ── 9. Save DB to cache ──────────────────────────────────────────────────
+      # The cache@v4 action only saves when the key is new/changed.
+      # We force a new key each run so the DB is always updated.
+      - name: Save updated recall database
+        uses: actions/cache/save@v4
+        if: success() && inputs.dry_run != 'true'
+        with:
+          path: data/recalls.db
+          key: recalls-db-v1-${{ github.ref_name }}-${{ github.run_number }}
+
+  # ── Separate test job ────────────────────────────────────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest
+        run: pytest tests/ -v --asyncio-mode=auto --tb=short

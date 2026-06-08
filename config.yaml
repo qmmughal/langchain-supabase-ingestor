@@ -1,0 +1,80 @@
+# FDA Recall Monitor — Configuration
+# All values can be overridden via environment variables (see .env.example)
+
+agent:
+  # Polling interval expressed as a cron expression (APScheduler syntax)
+  # Default: every 6 hours
+  schedule_cron: "0 */6 * * *"
+
+  # How many days back to look on the first run (subsequent runs use last-seen date)
+  initial_lookback_days: 30
+
+  # Maximum records to fetch per endpoint per poll
+  max_records_per_poll: 500
+
+  # Database path (relative to project root or absolute)
+  db_path: "data/recalls.db"
+
+  # NDJSON log path
+  log_path: "data/recalls.ndjson"
+
+  # HTML report output path
+  report_path: "data/report.html"
+
+# FDA endpoints to monitor
+endpoints:
+  - category: drug
+    endpoint: enforcement
+    enabled: true
+  - category: device
+    endpoint: enforcement
+    enabled: true
+  - category: device
+    endpoint: recall
+    enabled: true
+  - category: food
+    endpoint: enforcement
+    enabled: true
+
+# Filtering — only surface recalls matching these criteria (empty = all)
+filters:
+  # Minimum classification to alert on: "Class I", "Class II", "Class III", or ""
+  min_classification: ""
+
+  # Keywords to watch in product_description or reason_for_recall (OR logic)
+  # Leave empty to receive all recalls
+  keywords: []
+    # - "peanut"
+    # - "listeria"
+    # - "undeclared allergen"
+    # - "cardiac"
+
+  # US states to filter on (two-letter codes, leave empty for all)
+  states: []
+
+# Notification settings (credentials in .env)
+notifications:
+  # Notify only on Class I recalls unless notify_all is true
+  notify_all: false
+  notify_class_i: true
+  notify_class_ii: false
+
+  email:
+    enabled: false
+    # SMTP settings come from .env (SMTP_HOST, SMTP_PORT, SMTP_USER, etc.)
+    to: []
+      # - "safety-team@example.com"
+
+  slack:
+    enabled: false
+    # SLACK_WEBHOOK_URL comes from .env
+
+  webhook:
+    enabled: false
+    # WEBHOOK_URL comes from .env
+    # Sends POST with JSON body: { "recalls": [...] }
+
+# Logging
+logging:
+  level: "INFO"   # DEBUG | INFO | WARNING | ERROR
+  format: "rich"  # rich | json | plain
