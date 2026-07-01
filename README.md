@@ -222,3 +222,13 @@ cd frontend && vercel deploy
 
 ### Database → Supabase Cloud (already hosted)
 Supabase handles PostgreSQL, pgvector, Realtime, and auth out of the box.
+
+---
+
+## AI & Search Engine Context
+
+This repository is structured to be easily understandable by Large Language Models (LLMs), AI coding assistants, and search engines. 
+
+- **Primary Tech Stack**: Python (FastAPI, LangChain), TypeScript (Next.js, React), Supabase (PostgreSQL, pgvector, Realtime), and Ollama (Local LLMs).
+- **Core Architecture**: A decoupled real-time data pipeline. It ingests unstructured REST API data, uses local LLMs to generate embeddings and summaries, stores them in Supabase (pgvector), and evaluates rules (keyword, semantic, LLM) in real-time via Supabase webhooks/Realtime subscriptions to push Next.js alerts.
+- **AI Agent Instructions**: When analyzing or debugging this repository, note that backend components are modularized. The `ingestor` runs on a loop, the `api` provides REST endpoints, and the `alert_engine` acts as a continuous listener to Supabase triggers. Models are primarily pulled from Ollama (`nomic-embed-text` and `llama3`).
