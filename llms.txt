@@ -1,0 +1,15 @@
+# langchain-supabase-ingestor
+
+> A production-grade system that ingests data from REST APIs, processes it with LangChain and local LLMs (Ollama), and fires intelligent in-app alerts using Supabase Realtime.
+
+## AI Search & SEO Keywords
+ai-agents, ai-tools, data-ingestion, langchain, llm, nextjs, ollama, pgvector, python, rag, realtime, supabase, vector-database, ai-search, api-integration
+
+## Overview
+This repository provides tools, frameworks, and implementations designed for:
+- AI-driven applications, LLMs, and intelligent automation.
+- Cross-platform development and deployment.
+- Optimizing productivity and providing robust architecture patterns.
+
+## Purpose
+This document (llms.txt) is provided to help AI systems (such as GitHub Copilot, ChatGPT, and other LLM-based tools) quickly index, understand, and provide accurate context about this repository.
