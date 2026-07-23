@@ -225,4 +225,10 @@ Supabase handles PostgreSQL, pgvector, Realtime, and auth out of the box.
 
 ---
 
+## Productization note
+
+The alert engine here — keyword / semantic / LLM-agent evaluation over a live event stream — isn't specific to GitHub, weather, or FDA data. Those three [demo sources](#data-sources) exist to prove the ingestion pattern generalizes to *any* polled REST API. That's the shape of a standalone hosted product: "bring your own REST API, we watch it and alert you," with this repo's self-hosted pipeline as the reference implementation. No hosted version exists yet — this is a scoping note, not an announcement.
+
+---
+
 *Machine-readable repository context for AI agents and crawlers lives in [`llms.txt`](llms.txt).*
